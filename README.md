@@ -65,8 +65,13 @@ PNG named `AppIcon.png`; no other sizes are needed.
 
 ## Project layout
 
+Everything under `Pasteboard/` belongs to an Xcode 16 synchronized group, so
+new `.swift` files are picked up automatically. Just drop them in — no project
+file edits. Files outside that folder are not compiled.
+
 ```
 Pasteboard/
+  PasteboardApp.swift       entry point
   Models/
     ClipItem.swift          item model and content kinds
     ClipStore.swift         @Observable store, persistence, privacy filter
@@ -81,4 +86,7 @@ Pasteboard/
     DetailView.swift        full content, copy and open
     ComposeView.swift       multi-clip assembly
     SettingsView.swift      limits, privacy, export, danger zone
+  Assets.xcassets/          AppIcon, AccentColor
+
+Resources/Info.plist        background modes, orientations
 ```
