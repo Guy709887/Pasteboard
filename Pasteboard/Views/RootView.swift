@@ -26,7 +26,7 @@ struct RootView: View {
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
-                            Toggle(isOn: captureBinding) {
+                            Toggle(isOn: $store.autoCapture) {
                                 Label("Auto-capture", systemImage: "dot.radiowaves.left.and.right")
                             }
                             Button {
@@ -63,7 +63,4 @@ struct RootView: View {
         }
     }
 
-    private var captureBinding: Binding<Bool> {
-        $store.autoCapture
-    }
 }
