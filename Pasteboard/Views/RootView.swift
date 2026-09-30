@@ -64,9 +64,6 @@ struct RootView: View {
     }
 
     private var captureBinding: Binding<Bool> {
-        Binding(
-            get: { store.isCapturing },
-            set: { store.setAutoCapture($0) }
-        )
+        $store.autoCapture
     }
 }

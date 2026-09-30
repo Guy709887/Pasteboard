@@ -10,17 +10,36 @@ final class ClipStore {
     /// search field can bind straight to it.
     var searchText: String = ""
 
+    /// @AppStorage is a View property wrapper, so it cannot live on an
+    /// @Observable class. These mirror UserDefaults directly and stay
+    /// observation-tracked.
+    var maxItems: Int {
+        didSet { defaults.set(maxItems, forKey: Keys.maxItems) }
+    }
+
+    var autoCapture: Bool {
+        didSet { defaults.set(autoCapture, forKey: Keys.autoCapture) }
+    }
+
+    private enum Keys {
+        static let maxItems = "maxItems"
+        static let autoCapture = "autoCapture"
+    }
+
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private let defaults: UserDefaults
 
-    @AppStorage("maxItems") private var maxItems: Int = 200
-    @AppStorage("autoCapture") private var autoCapture: Bool = true
-
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        try? base.createDirectory(at: base, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         fileURL = base.appendingPathComponent("clips.json")
+
+        maxItems = defaults.object(forKey: Keys.maxItems) as? Int ?? 200
+        autoCapture = defaults.object(forKey: Keys.autoCapture) as? Bool ?? true
+
         load()
     }
 
@@ -127,10 +146,6 @@ final class ClipStore {
 
     // MARK: Capture
 
-    func setAutoCapture(_ enabled: Bool) {
-        autoCapture = enabled
-    }
-
     var isCapturing: Bool { autoCapture }
 
     // MARK: Privacy
@@ -150,7 +165,8 @@ final class ClipStore {
     // MARK: Persistence
 
     private func trim() {
-        let limit = max(20, min(maxItems, 1000))
+        let configured = defaults.object(forKey: Keys.maxItems) as? Int ?? maxItems
+        let limit = max(20, min(configured, 1000))
         let history = items.filter { !$0.isPinned }
         if history.count > limit {
             let excess = history.suffix(history.count - limit)

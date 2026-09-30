@@ -1,12 +1,11 @@
 import SwiftUI
-import UIKit
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(ClipStore.self) private var store
     @Environment(PasteboardMonitor.self) private var monitor
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage("maxItems") private var maxItems: Int = 200
     @AppStorage("confirmBeforeDelete") private var confirmBeforeDelete: Bool = false
 
     @State private var showingClearAll = false
@@ -14,6 +13,8 @@ struct SettingsView: View {
     @State private var exportText = ""
 
     var body: some View {
+        @Bindable var store = store
+
         NavigationStack {
             Form {
                 Section {
@@ -27,7 +28,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Picker("Keep at most", selection: $maxItems) {
+                    Picker("Keep at most", selection: $store.maxItems) {
                         Text("50").tag(50)
                         Text("200").tag(200)
                         Text("500").tag(500)
