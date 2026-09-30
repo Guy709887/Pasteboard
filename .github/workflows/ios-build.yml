@@ -1,0 +1,60 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Compile
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Pasteboard.xcodeproj \
+            -scheme Pasteboard \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+
+      # Sideloadly and SideStore both re-sign on install, so an unsigned
+      # archive is all we need. The .ipa is just Payload/<App>.app zipped.
+      - name: Package IPA
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Pasteboard.app"
+          test -d "$APP_PATH"
+          rm -rf Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qry Pasteboard.ipa Payload
+          echo "--- bundle contents ---"
+          ls -la Payload/Pasteboard.app | head -30
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pasteboard-ipa
+          path: Pasteboard.ipa
+          if-no-files-found: error
