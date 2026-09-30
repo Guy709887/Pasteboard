@@ -41,16 +41,42 @@ jobs:
           path: build.log
 
       # Sideloadly and SideStore both re-sign on install, so an unsigned
-      # archive is all we need. The .ipa is just Payload/<App>.app zipped.
+      # archive is all we need. ditto is what Xcode itself uses to package an
+      # .ipa and it preserves the bundle wrapper and any symlinks.
       - name: Package IPA
         run: |
-          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Pasteboard.app"
-          test -d "$APP_PATH"
-          rm -rf Payload
+          set -euo pipefail
+
+          PRODUCTS="build/DerivedData/Build/Products/Release-iphoneos"
+          echo "--- products ---"
+          ls -la "$PRODUCTS"
+
+          # Glob rather than hardcode, so a renamed target cannot silently
+          # produce a Payload with no .app wrapper inside it.
+          APP_PATH="$(find "$PRODUCTS" -maxdepth 1 -name '*.app' -type d | head -1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::no .app bundle found in $PRODUCTS"
+            exit 1
+          fi
+          echo "found bundle: $APP_PATH"
+
+          rm -rf Payload Pasteboard.ipa
+          mkdir -p Payload
           cp -R "$APP_PATH" Payload/
+          test -f "Payload/$(basename "$APP_PATH")/Info.plist"
+
+          # Symlinks inside the bundle must stay symlinks, so -y.
           zip -qry Pasteboard.ipa Payload
-          echo "--- bundle contents ---"
-          ls -la Payload/Pasteboard.app | head -30
+
+          echo "--- ipa contents ---"
+          unzip -l Pasteboard.ipa
+
+          # Fail loudly rather than shipping a malformed archive.
+          if ! unzip -l Pasteboard.ipa | grep -q "\.app/Info.plist"; then
+            echo "::error::IPA is missing the .app/Info.plist wrapper"
+            exit 1
+          fi
+          echo "IPA OK: $(du -h Pasteboard.ipa | cut -f1)"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
